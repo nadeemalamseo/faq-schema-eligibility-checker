@@ -116,6 +116,12 @@ See CONTRIBUTING.md.
 
 See SECURITY.md.
 
+## Project links
+
+- [Project landing page](https://nadeemalamseo.github.io/faq-schema-eligibility-checker/)
+- [v0.1.0 release](https://github.com/nadeemalamseo/faq-schema-eligibility-checker/releases/tag/v0.1.0)
+- [Download v0.1.0 ZIP](https://github.com/nadeemalamseo/faq-schema-eligibility-checker/archive/refs/tags/v0.1.0.zip)
+
 ## License
 
 MIT. See LICENSE.
