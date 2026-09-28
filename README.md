@@ -124,4 +124,4 @@ See SECURITY.md.
 
 ## License
 
-MIT. See LICENSE.
+This repository is licensed under the MIT License. See [LICENSE](LICENSE).
