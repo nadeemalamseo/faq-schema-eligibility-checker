@@ -74,3 +74,27 @@ def test_faqpage_inside_graph_is_detected():
     """
     report = audit_html(html)
     assert report.status == "PASS"
+
+
+def test_empty_main_entity_fails():
+    html = """
+    <h2>What is SEO?</h2>
+    <p>SEO helps search engines understand content.</p>
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[]}
+    </script>
+    """
+    report = audit_html(html)
+    assert report.status == "FAIL"
+    assert any(f.code == "INVALID_JSONLD" for f in report.findings)
+
+
+def test_missing_main_entity_fails():
+    html = """
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"FAQPage"}
+    </script>
+    """
+    report = audit_html(html)
+    assert report.status == "FAIL"
+    assert any(f.code == "INVALID_JSONLD" for f in report.findings)
