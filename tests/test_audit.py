@@ -31,3 +31,46 @@ def test_invalid_faq_fails():
     report = audit_html(read_example("invalid-faq.html"))
     assert report.status == "FAIL"
     assert any(f.code == "INVALID_JSONLD" for f in report.findings)
+
+
+def test_multiple_visible_faqs_are_matched():
+    html = """
+    <h2>What is SEO?</h2>
+    <p>SEO helps search engines understand content.</p>
+    <h2>What is JSON-LD?</h2>
+    <p>JSON-LD is a format for structured data.</p>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {"@type":"Question","name":"What is SEO?","acceptedAnswer":{"@type":"Answer","text":"SEO helps search engines understand content."}},
+        {"@type":"Question","name":"What is JSON-LD?","acceptedAnswer":{"@type":"Answer","text":"JSON-LD is a format for structured data."}}
+      ]
+    }
+    </script>
+    """
+    report = audit_html(html)
+    assert report.status == "PASS"
+    assert len(report.visible_faqs) == 2
+    assert len(report.schema_faqs) == 2
+
+
+def test_faqpage_inside_graph_is_detected():
+    html = """
+    <h2>What is SEO?</h2>
+    <p>SEO helps search engines understand content.</p>
+    <script type="application/ld+json">
+    {
+      "@context":"https://schema.org",
+      "@graph":[
+        {"@type":"WebSite","name":"Example"},
+        {"@type":"FAQPage","mainEntity":[
+          {"@type":"Question","name":"What is SEO?","acceptedAnswer":{"@type":"Answer","text":"SEO helps search engines understand content."}}
+        ]}
+      ]
+    }
+    </script>
+    """
+    report = audit_html(html)
+    assert report.status == "PASS"
