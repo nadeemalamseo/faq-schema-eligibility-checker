@@ -1,6 +1,6 @@
 # FAQ Schema Eligibility Checker
 
-Audit FAQPage structured data against visible FAQ content and detect common implementation, matching, and eligibility issues.
+Audit FAQPage structured data against visible FAQ content and detect common implementation and content-consistency issues.
 
 > Status: Early alpha. The checker provides deterministic technical findings; it does not predict or guarantee a Google Search appearance.
 
@@ -28,7 +28,7 @@ This project does not:
 - replace Google's or Schema.org's validators
 - decide whether a page is legally or editorially required to contain FAQs
 
-The term "eligibility" refers to technical/content quality checks around an FAQPage implementation, not a promise of eligibility for a Google search feature.
+The repository name uses "eligibility" as a historical shorthand for implementation quality. It does **not** claim eligibility for a Google Search feature. Google removed the FAQ rich result from Search in 2026; this tool remains useful for auditing the technical consistency of FAQPage structured data with visible page content.
 
 ## Installation
 
