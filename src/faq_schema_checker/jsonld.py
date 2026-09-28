@@ -64,12 +64,23 @@ def extract_schema_faqs(html: str) -> tuple[list[SchemaFAQ], int, list[str]]:
                 continue
 
             faqpage_count += 1
-            main_entity = node.get("mainEntity", [])
+            if "mainEntity" not in node:
+                errors.append(
+                    f"FAQPage block {index}: mainEntity is missing."
+                )
+                continue
+
+            main_entity = node.get("mainEntity")
             if isinstance(main_entity, dict):
                 main_entity = [main_entity]
             if not isinstance(main_entity, list):
                 errors.append(
                     f"FAQPage block {index}: mainEntity is not an array or object."
+                )
+                continue
+            if not main_entity:
+                errors.append(
+                    f"FAQPage block {index}: mainEntity is empty."
                 )
                 continue
 
