@@ -38,6 +38,11 @@ def _as_nodes(value):
     return [value] if isinstance(value, dict) else []
 
 
+def _is_faqpage(node: dict) -> bool:
+    value = node.get("@type")
+    return value == "FAQPage" or (isinstance(value, list) and "FAQPage" in value)
+
+
 def extract_schema_faqs(html: str) -> tuple[list[SchemaFAQ], int, list[str]]:
     parser = JSONLDScriptParser()
     parser.feed(html)
@@ -55,7 +60,7 @@ def extract_schema_faqs(html: str) -> tuple[list[SchemaFAQ], int, list[str]]:
             continue
 
         for node in _as_nodes(data):
-            if node.get("@type") != "FAQPage":
+            if not isinstance(node, dict) or not _is_faqpage(node):
                 continue
 
             faqpage_count += 1
