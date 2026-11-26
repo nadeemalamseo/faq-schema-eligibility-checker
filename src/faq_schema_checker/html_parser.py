@@ -9,6 +9,7 @@ class FAQHTMLParser(HTMLParser):
 
     QUESTION_TAGS = {"h2", "h3", "h4", "dt"}
     ANSWER_TAGS = {"dd", "p"}
+    VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -36,11 +37,13 @@ class FAQHTMLParser(HTMLParser):
             self._summary_text = []
             return
         if self._summary_depth:
-            self._summary_depth += 1
+            if tag not in self.VOID_TAGS:
+                self._summary_depth += 1
             return
 
         if self._capture_tag is not None:
-            self._capture_depth += 1
+            if tag not in self.VOID_TAGS:
+                self._capture_depth += 1
             return
         if tag in self.QUESTION_TAGS | self.ANSWER_TAGS:
             self._capture_tag = tag
@@ -70,22 +73,19 @@ class FAQHTMLParser(HTMLParser):
 
         if self._capture_tag is None:
             return
-        if tag == self._capture_tag:
-            self._capture_depth -= 1
-            if self._capture_depth == 0:
-                captured_tag = self._capture_tag
-                value = clean_text(" ".join(self._capture_text))
-                self._capture_tag = None
-                self._capture_text = []
-                if value:
-                    if captured_tag in self.QUESTION_TAGS:
-                        self._pending_question = value
-                    elif self._pending_question:
-                        self._pairs.append((self._pending_question, value))
-                        self._pending_question = None
-            return
-        # Ignore closing tags for nested inline elements; the outer capture
-        # remains active until its own matching end tag.
+        self._capture_depth -= 1
+        if self._capture_depth <= 0:
+            captured_tag = self._capture_tag
+            value = clean_text(" ".join(self._capture_text))
+            self._capture_tag = None
+            self._capture_depth = 0
+            self._capture_text = []
+            if value:
+                if captured_tag in self.QUESTION_TAGS:
+                    self._pending_question = value
+                elif self._pending_question:
+                    self._pairs.append((self._pending_question, value))
+                    self._pending_question = None
 
     def handle_data(self, data: str) -> None:
         if self._ignored_depth:
