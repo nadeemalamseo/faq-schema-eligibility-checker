@@ -65,7 +65,7 @@ class FAQHTMLParser(HTMLParser):
         if self._summary_depth:
             self._summary_depth -= 1
             if self._summary_depth == 0:
-                question = clean_text(" ".join(self._summary_text))
+                question = clean_text("".join(self._summary_text))
                 if question:
                     self._pending_question = question
                 self._summary_text = []
@@ -76,7 +76,7 @@ class FAQHTMLParser(HTMLParser):
         self._capture_depth -= 1
         if self._capture_depth <= 0:
             captured_tag = self._capture_tag
-            value = clean_text(" ".join(self._capture_text))
+            value = clean_text("".join(self._capture_text))
             self._capture_tag = None
             self._capture_depth = 0
             self._capture_text = []
