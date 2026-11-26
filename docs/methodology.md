@@ -1,33 +1,26 @@
 # Audit Methodology
 
-The checker is intentionally deterministic and local.
+The checker is a deterministic, local quality-control utility. It does not fetch websites or run JavaScript.
 
 ## 1. Input
 
-The tool reads an HTML document from the local filesystem. Core auditing does not make network requests.
+The CLI reads a local HTML document. The audit functions operate on the supplied HTML string and make no network requests.
 
 ## 2. Visible FAQ extraction
 
-The first implementation supports common question-and-answer patterns:
+Supported patterns include:
 
 - H2/H3/H4 followed by a paragraph or answer block
 - DT/DD definition-list pairs
 - SUMMARY followed by an answer paragraph
 
-The extractor returns the question and answer text that it can identify from the supplied HTML.
+Nested inline elements (for example, strong and em) are included in captured text. Script, style, noscript, and template contents are excluded. This is a lightweight HTML parser, not a browser rendering engine; it does not calculate CSS visibility or accessibility-tree output.
 
 ## 3. JSON-LD extraction
 
-The tool scans script elements with type application/ld+json and parses valid JSON.
+The checker scans script elements whose media type is application/ld+json, including a media-type parameter. It recognizes FAQPage nodes in top-level objects, arrays, and nested @graph containers. The @type value may be the compact FAQPage name, an absolute Schema.org type IRI, or an array containing either form.
 
-It recognizes FAQPage nodes:
-
-- directly in a JSON-LD object
-- in a top-level JSON-LD array
-- inside an @graph array
-- where @type is FAQPage or includes FAQPage in a type array
-
-For each Question, it checks for a non-empty name and acceptedAnswer.text.
+For each FAQPage, it checks that mainEntity contains supported Question objects with a non-empty name and acceptedAnswer.text string. This is a deliberately limited subset of Schema.org, not a complete vocabulary validator.
 
 ## 4. Matching
 
@@ -38,29 +31,16 @@ Visible and structured-data pairs are compared using normalized text:
 - leading and trailing whitespace is removed
 - comparison is case-insensitive
 
-The first release deliberately does not use semantic similarity or an LLM.
+The checker does not infer semantic equivalence or use an LLM.
 
 ## 5. Findings
 
-The checker can report:
+The checker can report NO_FAQPAGE, DUPLICATE_FAQPAGE, NO_VISIBLE_FAQ, INVALID_JSONLD, SCHEMA_VISIBLE_MISMATCH, VISIBLE_NOT_MARKED_UP, SCHEMA_WITHOUT_VISIBLE_FAQ, and AUDIT_PASS.
 
-- NO_FAQPAGE
-- DUPLICATE_FAQPAGE
-- NO_VISIBLE_FAQ
-- INVALID_JSONLD
-- SCHEMA_VISIBLE_MISMATCH
-- VISIBLE_NOT_MARKED_UP
-- SCHEMA_WITHOUT_VISIBLE_FAQ
-- AUDIT_PASS
+PASS, REVIEW, and FAIL are tool-specific statuses, not Schema.org validation grades or Google Search feature eligibility decisions.
 
-Severity indicates the tool's own technical assessment:
+## 6. Search feature context
 
-- error
-- warning
-- info
+Google announced that FAQ rich results would stop appearing in Search beginning May 7, 2026, and removed the feature documentation in June 2026. This checker therefore focuses on structured-data implementation consistency and content quality, not Google FAQ rich-result eligibility. FAQPage remains a Schema.org type; its presence does not imply a Google Search enhancement.
 
-## 6. Interpretation
-
-PASS, REVIEW, and FAIL are tool-specific audit statuses. They are not Google's search-feature eligibility decisions.
-
-A technically correct implementation can still receive no special search appearance.
+Official source: [Google Search documentation updates](https://developers.google.com/search/updates).
