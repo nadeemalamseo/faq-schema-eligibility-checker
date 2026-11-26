@@ -5,71 +5,95 @@ from .normalize import clean_text
 
 
 class FAQHTMLParser(HTMLParser):
-    """Dependency-free parser for common visible FAQ structures."""
+    """Dependency-free extractor for common server-rendered FAQ patterns."""
+
+    QUESTION_TAGS = {"h2", "h3", "h4", "dt"}
+    ANSWER_TAGS = {"dd", "p"}
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
-        self._current_tag: str | None = None
-        self._current_text: list[str] = []
+        self._capture_tag: str | None = None
+        self._capture_depth = 0
+        self._capture_text: list[str] = []
         self._pairs: list[tuple[str, str]] = []
         self._pending_question: str | None = None
-        self._dt: str | None = None
-        self._in_script_or_style = 0
-        self._in_summary = False
+        self._summary_depth = 0
         self._summary_text: list[str] = []
+        self._ignored_depth = 0
+        self._ignored_tags: list[str] = []
 
     def handle_starttag(self, tag: str, attrs) -> None:
         tag = tag.lower()
-        if tag in {"script", "style", "noscript"}:
-            self._in_script_or_style += 1
+        if tag in {"script", "style", "noscript", "template"}:
+            self._ignored_depth += 1
+            self._ignored_tags.append(tag)
+            return
+        if self._ignored_depth:
             return
 
-        if tag == "summary":
-            self._in_summary = True
+        if tag == "summary" and self._capture_tag is None:
+            self._summary_depth = 1
             self._summary_text = []
-        elif tag in {"h2", "h3", "h4", "dt", "dd", "p"}:
-            self._current_tag = tag
-            self._current_text = []
+            return
+        if self._summary_depth:
+            self._summary_depth += 1
+            return
+
+        if self._capture_tag is not None:
+            self._capture_depth += 1
+            return
+        if tag in self.QUESTION_TAGS | self.ANSWER_TAGS:
+            self._capture_tag = tag
+            self._capture_depth = 1
+            self._capture_text = []
+
+    def handle_startendtag(self, tag: str, attrs) -> None:
+        self.handle_starttag(tag, attrs)
+        self.handle_endtag(tag)
 
     def handle_endtag(self, tag: str) -> None:
         tag = tag.lower()
-
-        if tag in {"script", "style", "noscript"}:
-            if self._in_script_or_style:
-                self._in_script_or_style -= 1
+        if self._ignored_depth:
+            if self._ignored_tags and tag == self._ignored_tags[-1]:
+                self._ignored_tags.pop()
+                self._ignored_depth -= 1
             return
 
-        if tag == "summary" and self._in_summary:
-            question = clean_text(" ".join(self._summary_text))
-            if question:
-                self._pending_question = question
-            self._in_summary = False
-            self._summary_text = []
+        if self._summary_depth:
+            self._summary_depth -= 1
+            if self._summary_depth == 0:
+                question = clean_text(" ".join(self._summary_text))
+                if question:
+                    self._pending_question = question
+                self._summary_text = []
             return
 
-        if tag not in {"h2", "h3", "h4", "dt", "dd", "p"}:
+        if self._capture_tag is None:
             return
-
-        text = clean_text(" ".join(self._current_text))
-        self._current_text = []
-        self._current_tag = None
-
-        if not text:
+        if tag == self._capture_tag:
+            self._capture_depth -= 1
+            if self._capture_depth == 0:
+                captured_tag = self._capture_tag
+                value = clean_text(" ".join(self._capture_text))
+                self._capture_tag = None
+                self._capture_text = []
+                if value:
+                    if captured_tag in self.QUESTION_TAGS:
+                        self._pending_question = value
+                    elif self._pending_question:
+                        self._pairs.append((self._pending_question, value))
+                        self._pending_question = None
             return
-
-        if tag in {"h2", "h3", "h4", "dt"}:
-            self._pending_question = text
-        elif tag in {"dd", "p"} and self._pending_question:
-            self._pairs.append((self._pending_question, text))
-            self._pending_question = None
+        # Ignore closing tags for nested inline elements; the outer capture
+        # remains active until its own matching end tag.
 
     def handle_data(self, data: str) -> None:
-        if self._in_script_or_style:
+        if self._ignored_depth:
             return
-        if self._in_summary:
+        if self._summary_depth:
             self._summary_text.append(data)
-        elif self._current_tag:
-            self._current_text.append(data)
+        elif self._capture_tag is not None:
+            self._capture_text.append(data)
 
     def visible_faqs(self) -> list[VisibleFAQ]:
         seen: set[tuple[str, str]] = set()
